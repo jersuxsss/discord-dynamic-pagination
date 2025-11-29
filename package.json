@@ -1,0 +1,71 @@
+{
+  "name": "discord-dynamic-pagination",
+  "version": "1.0.0",
+  "description": "A powerful, library-agnostic pagination system for Discord bots. Support for buttons, select menus, and hybrid modes with full TypeScript support.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "discord",
+    "discord-bot",
+    "discord.js",
+    "eris",
+    "pagination",
+    "paginator",
+    "buttons",
+    "select-menu",
+    "embed",
+    "navigation",
+    "pages",
+    "interactive",
+    "components",
+    "typescript",
+    "bot-framework"
+  ],
+  "author": {
+    "name": "Jersuxs",
+    "url": "https://github.com/jersuxsss"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jersuxsss/discord-dynamic-pagination.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jersuxsss/discord-dynamic-pagination/issues"
+  },
+  "homepage": "https://github.com/jersuxsss/discord-dynamic-pagination#readme",
+  "license": "MIT",
+  "peerDependencies": {
+    "discord.js": "^14.0.0",
+    "eris": "^0.17.0"
+  },
+  "peerDependenciesMeta": {
+    "discord.js": {
+      "optional": true
+    },
+    "eris": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "discord.js": "^14.25.1",
+    "eris": "^0.17.2",
+    "eslint": "^8.0.0",
+    "jest": "^30.2.0",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.4.5",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,26 @@
+# Source files
+src/
+test/
+examples/
+
+# Config files
+tsconfig.json
+jest.config.js
+.eslintrc.json
+.prettierrc
+
+# Development files
+*.test.ts
+*.spec.ts
+.github/
+.vscode/
+.idea/
+
+# Misc
+coverage/
+*.log
+.env
+.env.*
+*.tgz
+.DS_Store
+Thumbs.db
