@@ -25,7 +25,7 @@ export enum ButtonStyle {
  * Function to dynamically generate page content
  * Useful for lazy loading or database queries
  */
-export type PageBuilder = (pageIndex: number, context: PaginatorContext) => Promise<any> | any;
+export type PageBuilder = (pageIndex: number, context: PaginatorContext) => Promise<MessageContent> | MessageContent;
 
 /**
  * Custom button configuration
@@ -92,7 +92,7 @@ export type OnDestroyCallback = (context: PaginatorContext) => void | Promise<vo
  */
 export interface PaginatorOptions {
     /** Array of pages (embeds, strings, or page builders) */
-    pages: any[] | PageBuilder;
+    pages: MessageContent[] | PageBuilder;
     /** Pagination type (buttons, select_menu, or hybrid) */
     type?: PaginationType;
     /** Timeout in milliseconds (default: 300000 - 5 minutes) */
@@ -140,18 +140,24 @@ export interface PaginatorContext {
     /** Whether pagination is still active */
     isActive: boolean;
     /** Custom metadata */
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 /**
  * Collector filter function type
  */
-export type CollectorFilter = (interaction: any) => boolean | Promise<boolean>;
+export type CollectorFilter = (interaction: unknown) => boolean | Promise<boolean>;
 
 /**
  * Message content type (can be string or message options object)
  */
-export type MessageContent = string | any;
+export type MessageContent = string | {
+    content?: string;
+    embeds?: unknown[];
+    components?: unknown[];
+    files?: unknown[];
+    [key: string]: unknown;
+};
 
 /**
  * Component types for Discord
@@ -172,3 +178,4 @@ export interface SelectMenuOption {
     emoji?: string;
     default?: boolean;
 }
+

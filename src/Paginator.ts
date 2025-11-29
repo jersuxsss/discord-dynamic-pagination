@@ -7,6 +7,8 @@ import {
     ButtonStyle,
     SelectMenuOption,
     PageBuilder,
+    MessageContent,
+    CollectorFilter,
 } from './types';
 
 /**
@@ -14,12 +16,12 @@ import {
  */
 export class Paginator extends EventEmitter {
     private adapter: AdapterInterface;
-    private options: any;
+    private options: PaginatorOptions;
     private context: PaginatorContext;
     private message: any;
     private collector: any;
     private timeoutTimer: NodeJS.Timeout | null = null;
-    private pages: any[];
+    private pages: MessageContent[] = [];
     private isPageBuilder: boolean;
 
     constructor(adapter: AdapterInterface, options: PaginatorOptions) {
@@ -49,13 +51,17 @@ export class Paginator extends EventEmitter {
         this.pages = [];
 
         this.context = {
-            currentPage: this.options.startPage,
+            currentPage: this.options.startPage || 0,
             totalPages: 0,
             userId: this.options.userId,
             isActive: false,
         };
     }
 
+    /**
+     * Start the pagination
+     * @param target - The interaction or message to reply to
+     */
     async send(target: any): Promise<void> {
         try {
             if (!this.context.userId) {
@@ -91,6 +97,9 @@ export class Paginator extends EventEmitter {
         }
     }
 
+    /**
+     * Update the pagination message
+     */
     async update(): Promise<void> {
         if (!this.context.isActive || !this.message) {
             throw new Error('Pagination is not active');
@@ -101,6 +110,10 @@ export class Paginator extends EventEmitter {
         await this.adapter.updateMessage(this.message, content, components);
     }
 
+    /**
+     * Go to a specific page
+     * @param index - Page index
+     */
     async goToPage(index: number): Promise<boolean> {
         if (!this.context.isActive) {
             return false;
@@ -113,7 +126,9 @@ export class Paginator extends EventEmitter {
         const oldPage = this.context.currentPage;
         this.context.currentPage = index;
 
-        await this.options.onPageChange(oldPage, index, this.context);
+        if (this.options.onPageChange) {
+            await this.options.onPageChange(oldPage, index, this.context);
+        }
         this.emit('pageChange', oldPage, index, this.context);
 
         const { content, components } = await this.renderPage();
@@ -122,6 +137,9 @@ export class Paginator extends EventEmitter {
         return true;
     }
 
+    /**
+     * Stop the pagination and clean up
+     */
     async destroy(): Promise<void> {
         if (!this.context.isActive) {
             return;
@@ -153,7 +171,9 @@ export class Paginator extends EventEmitter {
             }
         }
 
-        await this.options.onDestroy(this.context);
+        if (this.options.onDestroy) {
+            await this.options.onDestroy(this.context);
+        }
         this.emit('destroy', this.context);
     }
 
@@ -193,23 +213,30 @@ export class Paginator extends EventEmitter {
                 }
             }
         } else {
-            this.pages = this.options.pages as any[];
+            this.pages = this.options.pages as MessageContent[];
         }
 
         this.context.totalPages = this.pages.length;
     }
 
-    private async renderPage(disabled = false): Promise<{ content: any; components: any[] }> {
+    private async renderPage(disabled = false): Promise<{ content: MessageContent; components: any[] }> {
         let pageContent = this.pages[this.context.currentPage];
 
         if (typeof pageContent === 'function') {
-            pageContent = await pageContent(this.context.currentPage, this.context);
+            // Handle case where page itself is a function (unlikely with current types but good for safety)
+            pageContent = await (pageContent as any)(this.context.currentPage, this.context);
         }
 
-        if (this.options.pageDisplay.showInFooter && typeof pageContent === 'object' && pageContent.embeds) {
+        // Deep copy to avoid mutating original page if it's an object
+        if (typeof pageContent === 'object' && pageContent !== null) {
+            pageContent = JSON.parse(JSON.stringify(pageContent));
+        }
+
+        if (this.options.pageDisplay?.showInFooter && typeof pageContent === 'object' && pageContent !== null && (pageContent as any).embeds) {
             const pageText = this.getPageDisplayText();
-            if (pageContent.embeds[0]) {
-                pageContent.embeds[0].footer = { text: pageText };
+            const embeds = (pageContent as any).embeds;
+            if (embeds && embeds[0]) {
+                embeds[0].footer = { text: pageText };
             }
         }
 
@@ -234,9 +261,10 @@ export class Paginator extends EventEmitter {
 
     private createButtonRow(disabled = false): any {
         const buttons: any[] = [];
+        const customButtons = this.options.customButtons || {};
 
         if (this.options.showFirstLast) {
-            const firstBtn = this.options.customButtons.first || {};
+            const firstBtn = customButtons.first || {};
             buttons.push(
                 this.adapter.createButton(
                     'paginator_first',
@@ -248,7 +276,7 @@ export class Paginator extends EventEmitter {
             );
         }
 
-        const prevBtn = this.options.customButtons.previous || {};
+        const prevBtn = customButtons.previous || {};
         buttons.push(
             this.adapter.createButton(
                 'paginator_previous',
@@ -259,7 +287,7 @@ export class Paginator extends EventEmitter {
             )
         );
 
-        if (this.options.pageDisplay.showAsButton) {
+        if (this.options.pageDisplay?.showAsButton) {
             const pageText = this.getPageDisplayText();
             buttons.push(
                 this.adapter.createButton(
@@ -272,7 +300,7 @@ export class Paginator extends EventEmitter {
             );
         }
 
-        const nextBtn = this.options.customButtons.next || {};
+        const nextBtn = customButtons.next || {};
         buttons.push(
             this.adapter.createButton(
                 'paginator_next',
@@ -284,7 +312,7 @@ export class Paginator extends EventEmitter {
         );
 
         if (this.options.showFirstLast) {
-            const lastBtn = this.options.customButtons.last || {};
+            const lastBtn = customButtons.last || {};
             buttons.push(
                 this.adapter.createButton(
                     'paginator_last',
@@ -335,25 +363,28 @@ export class Paginator extends EventEmitter {
     }
 
     private getPageDisplayText(): string {
-        const format = this.options.pageDisplay.format || 'Page {current}/{total}';
+        const format = this.options.pageDisplay?.format || 'Page {current}/{total}';
         return format
             .replace('{current}', (this.context.currentPage + 1).toString())
             .replace('{total}', this.context.totalPages.toString());
     }
 
     private setupCollector(): void {
-        const filter = async (interaction: any): Promise<boolean> => {
+        const filter: CollectorFilter = async (interaction: any): Promise<boolean> => {
             const userId = this.adapter.getUserId(interaction);
 
             if (this.options.singleUserMode && userId !== this.context.userId) {
                 return false;
             }
 
-            const customFilterPass = await this.options.filter(userId, this.context);
-            return customFilterPass;
+            if (this.options.filter) {
+                const customFilterPass = await this.options.filter(userId, this.context);
+                return customFilterPass;
+            }
+            return true;
         };
 
-        this.collector = this.adapter.createCollector(this.message, filter, this.options.timeout);
+        this.collector = this.adapter.createCollector(this.message, filter, this.options.timeout || 300000);
 
         this.collector.on('collect', async (interaction: any) => {
             try {
@@ -394,7 +425,9 @@ export class Paginator extends EventEmitter {
     }
 
     private async handleTimeout(): Promise<void> {
-        await this.options.onTimeout(this.context);
+        if (this.options.onTimeout) {
+            await this.options.onTimeout(this.context);
+        }
         this.emit('timeout', this.context);
         await this.destroy();
     }
