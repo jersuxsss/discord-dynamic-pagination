@@ -1,6 +1,6 @@
 {
   "name": "discord-dynamic-pagination",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A powerful, library-agnostic pagination system for Discord bots. Support for buttons, select menus, and hybrid modes with full TypeScript support.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
